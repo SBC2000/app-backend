@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "lib": ["es2018", "es2015.core", "es2015.promise", "es2018.promise"],
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "target": "es5",
+    "sourceMap": true,
+    "downlevelIteration": true,
+    "types": ["node", "jest"],
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts"
+  ]
+}
