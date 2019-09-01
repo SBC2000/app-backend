@@ -3,9 +3,7 @@ import { Storage } from "./storage";
 
 describe("getNewerData", () => {
   describe("when the cache is not yet synchronized", () => {
-    const storageContent = undefined;
-
-    const cacheHandler = new CacheHandler(createStorage(storageContent));
+    const cacheHandler = new CacheHandler(createStorage());
 
     it("throws an error when getting data", () => {
       expect(() => {
@@ -21,25 +19,32 @@ describe("getNewerData", () => {
   });
 
   describe("when storage has data", () => {
-    const storageContent: StorageContent = {
-      latestFolderName: "20190001",
-      latestFileNames: {
-        databases: 3,
-        messages: undefined,
-        results: 4,
-        sponsors: 2,
-      },
-      data: {
-        databases: { some: "data" },
-        results: [
-          [{ one: "one" }, { two: "two" }],
-          [{ one: "one1" }],
-          [{ two: "two2" }],
-          [{ one: "one2" }],
-        ],
-        sponsors: { other: "data" },
-      },
-    };
+    let cacheHandler: CacheHandler;
+
+    beforeEach(async () => {
+      const storageContent: StorageContent = {
+        latestFolderName: "20190001",
+        latestFileNames: {
+          databases: 3,
+          messages: undefined,
+          results: 4,
+          sponsors: 2,
+        },
+        data: {
+          databases: { some: "data" },
+          results: [
+            [{ one: "one" }, { two: "two" }],
+            [{ one: "one1" }],
+            [{ two: "two2" }],
+            [{ one: "one2" }],
+          ],
+          sponsors: { other: "data" },
+        },
+      };
+
+      cacheHandler = new CacheHandler(createStorage(storageContent));
+      await cacheHandler.synchronize();
+    });
 
     it("returns current versions and empty data when calling with current versions", async () => {
       const versions: Versions = {
@@ -53,13 +58,11 @@ describe("getNewerData", () => {
       const expected: Cache = {
         versions,
         data: {},
-        messages: [[]],
-        results: [[]],
+        messages: [],
+        results: [],
         sponsors: {},
       };
 
-      const cacheHandler = new CacheHandler(createStorage(storageContent));
-      await cacheHandler.synchronize();
       const actual = cacheHandler.getNewerData(versions);
 
       expect(actual).toEqual(expected);
@@ -83,7 +86,7 @@ describe("getNewerData", () => {
           sponsors: 2,
         },
         data: { some: "data" },
-        messages: [[]],
+        messages: [],
         results: [
           [{ one: "one" }, { two: "two" }],
           [{ one: "one1" }],
@@ -93,8 +96,6 @@ describe("getNewerData", () => {
         sponsors: { other: "data" },
       };
 
-      const cacheHandler = new CacheHandler(createStorage(storageContent));
-      await cacheHandler.synchronize();
       const actual = cacheHandler.getNewerData(versions);
 
       expect(actual).toEqual(expected);
@@ -118,13 +119,11 @@ describe("getNewerData", () => {
           sponsors: 2,
         },
         data: {},
-        messages: [[]],
+        messages: [],
         results: [[{ two: "two2" }], [{ one: "one2" }]],
         sponsors: { other: "data" },
       };
 
-      const cacheHandler = new CacheHandler(createStorage(storageContent));
-      await cacheHandler.synchronize();
       const actual = cacheHandler.getNewerData(versions);
 
       expect(actual).toEqual(expected);
@@ -132,9 +131,16 @@ describe("getNewerData", () => {
   });
 
   describe("when storage has a database but no data", () => {
-    const storageContent: StorageContent = {
-      latestFolderName: "20190001",
-    };
+    let cacheHandler: CacheHandler;
+
+    beforeEach(async () => {
+      const storageContent: StorageContent = {
+        latestFolderName: "20190001",
+      };
+
+      cacheHandler = new CacheHandler(createStorage(storageContent));
+      await cacheHandler.synchronize();
+    });
 
     it("returns empty data", async () => {
       const versions: Versions = {
@@ -154,13 +160,11 @@ describe("getNewerData", () => {
           sponsors: 0,
         },
         data: {},
-        messages: [[]],
-        results: [[]],
+        messages: [],
+        results: [],
         sponsors: {},
       };
 
-      const cacheHandler = new CacheHandler(createStorage(storageContent));
-      await cacheHandler.synchronize();
       const actual = cacheHandler.getNewerData(versions);
 
       expect(actual).toEqual(expected);
@@ -168,12 +172,16 @@ describe("getNewerData", () => {
   });
 
   describe("when storage has no database", () => {
-    const storageContent: StorageContent = {};
+    let cacheHandler: CacheHandler;
+
+    beforeEach(async () => {
+      const storageContent: StorageContent = {};
+
+      cacheHandler = new CacheHandler(createStorage(storageContent));
+      await cacheHandler.synchronize();
+    });
 
     it("throws an exception when getting data", async () => {
-      const cacheHandler = new CacheHandler(createStorage(storageContent));
-      await cacheHandler.synchronize();
-
       expect(() => {
         cacheHandler.getNewerData({
           database: "something",
@@ -183,6 +191,145 @@ describe("getNewerData", () => {
           sponsors: 8,
         });
       }).toThrow();
+    });
+  });
+});
+
+describe("synchronize", () => {
+  let storageContent: StorageContent;
+  let cacheHandler: CacheHandler;
+
+  beforeEach(async () => {
+    storageContent = {
+      latestFolderName: "20190001",
+      latestFileNames: {
+        databases: 3,
+        messages: undefined,
+        results: 4,
+        sponsors: 2,
+      },
+      data: {
+        databases: { some: "data" },
+        results: [
+          [{ one: "one" }, { two: "two" }],
+          [{ one: "one1" }],
+          [{ two: "two2" }],
+          [{ one: "one2" }],
+        ],
+        sponsors: { other: "data" },
+      },
+    };
+
+    cacheHandler = new CacheHandler(createStorage(storageContent));
+    await cacheHandler.synchronize();
+  });
+
+  describe("when the data is updated", () => {
+    beforeEach(async () => {
+      // update underlying data
+      storageContent.latestFileNames = {
+        databases: 4, // increased
+        messages: 3, // increased
+        results: 4, // same
+        sponsors: 2, // same
+      };
+      storageContent.data = {
+        ...storageContent.data,
+        databases: { some: "new data" },
+        messages: [
+          [{ message: "one a" }, { message: "one b" }],
+          [{ message: "two" }],
+          [{ message: "three" }],
+        ],
+      };
+
+      await cacheHandler.synchronize();
+    });
+
+    it("contains the latest data", async () => {
+      const versions: Versions = {
+        database: "20180004",
+        data: 6,
+        messages: 3,
+        results: 2,
+        sponsors: 8,
+      };
+
+      const expected: Cache = {
+        versions: {
+          database: "20190001",
+          data: 4,
+          messages: 3,
+          results: 4,
+          sponsors: 2,
+        },
+        data: { some: "new data" },
+        messages: [
+          [{ message: "one a" }, { message: "one b" }],
+          [{ message: "two" }],
+          [{ message: "three" }],
+        ],
+        results: [
+          [{ one: "one" }, { two: "two" }],
+          [{ one: "one1" }],
+          [{ two: "two2" }],
+          [{ one: "one2" }],
+        ],
+        sponsors: { other: "data" },
+      };
+
+      const actual = cacheHandler.getNewerData(versions);
+
+      expect(actual).toEqual(expected);
+    });
+  });
+
+  describe("when the database version is increased", () => {
+    beforeEach(async () => {
+      // update underlying data
+      storageContent.latestFolderName = "20190002";
+      storageContent.latestFileNames = {
+        databases: 1,
+        messages: 1,
+        results: 1,
+        sponsors: 1,
+      };
+      storageContent.data = {
+        databases: { some: "new data" },
+        messages: [[{ message: "one a" }, { message: "one b" }]],
+        results: [[{ some: "thing" }]],
+        sponsors: { some: "sponsors" },
+      };
+
+      await cacheHandler.synchronize();
+    });
+
+    it("contains the latest data", async () => {
+      const versions: Versions = {
+        database: "20180004",
+        data: 6,
+        messages: 3,
+        results: 2,
+        sponsors: 8,
+      };
+
+      const expected: Cache = {
+        versions: {
+          database: "20190002",
+          data: 1,
+          messages: 1,
+          results: 1,
+          sponsors: 1,
+        },
+        data: { some: "new data" },
+        messages: [[{ message: "one a" }, { message: "one b" }]],
+        results: [[{ some: "thing" }]],
+        sponsors: { some: "sponsors" },
+      };
+
+      const actual = cacheHandler.getNewerData(versions);
+
+      expect(actual).toEqual(expected);
     });
   });
 });

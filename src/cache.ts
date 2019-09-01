@@ -17,8 +17,8 @@ export class CacheHandler {
         sponsors: 0,
       },
       data: {},
-      messages: [[]],
-      results: [[]],
+      messages: [],
+      results: [],
       sponsors: {},
     };
   }
@@ -177,7 +177,7 @@ export class CacheHandler {
 
     // We need no data: return empty array
     if (newVersion === 0) {
-      return [[]];
+      return [];
     }
 
     const newData = await this.storage.getArrayFiles(
@@ -207,7 +207,7 @@ export class CacheHandler {
     previousVersion: number,
     data: object[][]
   ): object[][] {
-    return previousVersion < data.length ? data.slice(previousVersion) : [[]];
+    return previousVersion < data.length ? data.slice(previousVersion) : [];
   }
 }
 
