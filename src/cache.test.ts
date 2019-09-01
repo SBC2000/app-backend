@@ -1,9 +1,12 @@
 import { Cache, CacheHandler, Versions } from "./cache";
+import { createDummyLogger } from "./logger";
 import { Storage } from "./storage";
+
+const logger = createDummyLogger();
 
 describe("getNewerData", () => {
   describe("when the cache is not yet synchronized", () => {
-    const cacheHandler = new CacheHandler(createStorage());
+    const cacheHandler = new CacheHandler(createStorage(), logger);
 
     it("throws an error when getting data", () => {
       expect(() => {
@@ -23,7 +26,7 @@ describe("getNewerData", () => {
 
     beforeEach(async () => {
       const storageContent: StorageContent = {
-        latestFolderName: "20190001",
+        latestFolderName: "201901",
         latestFileNames: {
           databases: 3,
           messages: undefined,
@@ -42,13 +45,13 @@ describe("getNewerData", () => {
         },
       };
 
-      cacheHandler = new CacheHandler(createStorage(storageContent));
+      cacheHandler = new CacheHandler(createStorage(storageContent), logger);
       await cacheHandler.synchronize();
     });
 
     it("returns current versions and empty data when calling with current versions", async () => {
       const versions: Versions = {
-        database: "20190001",
+        database: "201901",
         data: 3,
         messages: 0,
         results: 4,
@@ -79,7 +82,7 @@ describe("getNewerData", () => {
 
       const expected: Cache = {
         versions: {
-          database: "20190001",
+          database: "201901",
           data: 3,
           messages: 0,
           results: 4,
@@ -103,7 +106,7 @@ describe("getNewerData", () => {
 
     it("returns partial data when calling with older versions", async () => {
       const versions: Versions = {
-        database: "20190001",
+        database: "201901",
         data: 3,
         messages: 0,
         results: 2,
@@ -112,7 +115,7 @@ describe("getNewerData", () => {
 
       const expected: Cache = {
         versions: {
-          database: "20190001",
+          database: "201901",
           data: 3,
           messages: 0,
           results: 4,
@@ -135,10 +138,10 @@ describe("getNewerData", () => {
 
     beforeEach(async () => {
       const storageContent: StorageContent = {
-        latestFolderName: "20190001",
+        latestFolderName: "201901",
       };
 
-      cacheHandler = new CacheHandler(createStorage(storageContent));
+      cacheHandler = new CacheHandler(createStorage(storageContent), logger);
       await cacheHandler.synchronize();
     });
 
@@ -153,7 +156,7 @@ describe("getNewerData", () => {
 
       const expected: Cache = {
         versions: {
-          database: "20190001",
+          database: "201901",
           data: 0,
           messages: 0,
           results: 0,
@@ -177,7 +180,7 @@ describe("getNewerData", () => {
     beforeEach(async () => {
       const storageContent: StorageContent = {};
 
-      cacheHandler = new CacheHandler(createStorage(storageContent));
+      cacheHandler = new CacheHandler(createStorage(storageContent), logger);
       await cacheHandler.synchronize();
     });
 
@@ -201,7 +204,7 @@ describe("synchronize", () => {
 
   beforeEach(async () => {
     storageContent = {
-      latestFolderName: "20190001",
+      latestFolderName: "201901",
       latestFileNames: {
         databases: 3,
         messages: undefined,
@@ -220,7 +223,7 @@ describe("synchronize", () => {
       },
     };
 
-    cacheHandler = new CacheHandler(createStorage(storageContent));
+    cacheHandler = new CacheHandler(createStorage(storageContent), logger);
     await cacheHandler.synchronize();
   });
 
@@ -257,7 +260,7 @@ describe("synchronize", () => {
 
       const expected: Cache = {
         versions: {
-          database: "20190001",
+          database: "201901",
           data: 4,
           messages: 3,
           results: 4,
@@ -287,7 +290,7 @@ describe("synchronize", () => {
   describe("when the database version is increased", () => {
     beforeEach(async () => {
       // update underlying data
-      storageContent.latestFolderName = "20190002";
+      storageContent.latestFolderName = "201902";
       storageContent.latestFileNames = {
         databases: 1,
         messages: 1,
@@ -315,7 +318,7 @@ describe("synchronize", () => {
 
       const expected: Cache = {
         versions: {
-          database: "20190002",
+          database: "201902",
           data: 1,
           messages: 1,
           results: 1,
