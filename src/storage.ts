@@ -87,7 +87,12 @@ export class S3Storage implements Storage {
   public async getObjectFile(
     folder: string,
     subFolder: string,
-    fileName: number
+    fileName: number,
+    // We ignore parse errors for array data because otherwise we could never
+    // recover from corrupted data. For object data we can just upload a new
+    // version but for arrays we would retry loading until parsing succeeds.
+    // Yes, this is a hack, but that applies to most of this project.
+    ignoreParseErrors: boolean = false
   ): Promise<object> {
     const fullFileName = `0000${fileName}`.slice(-4);
 
@@ -102,7 +107,14 @@ export class S3Storage implements Storage {
       return {};
     }
 
-    return JSON.parse(object.Body.toString());
+    try {
+      return JSON.parse(object.Body.toString());
+    } catch (error) {
+      if (ignoreParseErrors) {
+        return {};
+      }
+      throw error;
+    }
   }
 
   public async getArrayFiles(
@@ -114,7 +126,7 @@ export class S3Storage implements Storage {
     const files = await Promise.all(
       [...Array(end - start).keys()]
         .map(x => x + start + 1)
-        .map(fileName => this.getObjectFile(folder, subFolder, fileName))
+        .map(fileName => this.getObjectFile(folder, subFolder, fileName, true))
     );
 
     return files

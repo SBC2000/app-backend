@@ -27,108 +27,112 @@ export class CacheHandler {
   }
 
   public async synchronize(): Promise<void> {
-    this.logger.info("Starting cache synchronization");
+    try {
+      this.logger.info("Starting cache synchronization");
 
-    const databaseVersion = await this.storage.getLatestFolderName();
+      const databaseVersion = await this.storage.getLatestFolderName();
 
-    if (!databaseVersion) {
-      this.logger.warning("No database found");
-      return;
+      if (!databaseVersion) {
+        this.logger.warning("No database found");
+        return;
+      }
+
+      this.logger.info(`Found database ${databaseVersion}`);
+      this.logger.info("Loading data versions...");
+
+      const [
+        dataVersion,
+        messagesVersion,
+        resultsVersion,
+        sponsorsVersion,
+      ] = await Promise.all(
+        ["databases", "messages", "results", "sponsors"].map(folder =>
+          this.getVersionFromStorage(databaseVersion, folder)
+        )
+      );
+
+      this.logger.info(
+        `Versions found:\n  data: ${dataVersion}\n  messages: ${messagesVersion}\n  results: ${resultsVersion}\n  sponsors: ${sponsorsVersion}`
+      );
+
+      const { versions } = this.cache;
+
+      this.logger.info("Loading file contents...");
+      const [data, messages, results, sponsors] = await Promise.all([
+        (async () => {
+          const result = await this.getObjectFromStorage(
+            databaseVersion,
+            "databases",
+            dataVersion,
+            versions.data,
+            this.cache.data
+          );
+          this.logger.info(
+            `Loaded ${databaseVersion}/databases version ${dataVersion}`
+          );
+          return result;
+        })(),
+        (async () => {
+          const result = await this.getArraysFromStorage(
+            databaseVersion,
+            "messages",
+            messagesVersion,
+            versions.messages,
+            this.cache.messages
+          );
+          this.logger.info(
+            `Loaded ${databaseVersion}/messages version (${versions.messages}, ${messagesVersion}]`
+          );
+          return result;
+        })(),
+        (async () => {
+          const result = await this.getArraysFromStorage(
+            databaseVersion,
+            "results",
+            resultsVersion,
+            versions.results,
+            this.cache.results
+          );
+          this.logger.info(
+            `Loaded ${databaseVersion}/results version (${versions.results}, ${resultsVersion}]`
+          );
+          return result;
+        })(),
+        (async () => {
+          const result = await this.getObjectFromStorage(
+            databaseVersion,
+            "sponsors",
+            sponsorsVersion,
+            versions.sponsors,
+            this.cache.sponsors
+          );
+          this.logger.info(
+            `Loaded ${databaseVersion}/sponsors version ${sponsorsVersion}`
+          );
+          return result;
+        })(),
+      ]);
+
+      this.cache = {
+        versions: {
+          database: databaseVersion,
+          data: dataVersion,
+          messages: messagesVersion,
+          results: resultsVersion,
+          sponsors: sponsorsVersion,
+        },
+        data,
+        messages,
+        results,
+        sponsors,
+      };
+
+      this.initialized = true;
+
+      this.logger.info("Cache synchronization complete");
+    } catch (error) {
+      this.logger.error(`Failed to synchronize cache: ${error}`);
     }
-
-    this.logger.info(`Found database ${databaseVersion}`);
-    this.logger.info("Loading data versions...");
-
-    const [
-      dataVersion,
-      messagesVersion,
-      resultsVersion,
-      sponsorsVersion,
-    ] = await Promise.all(
-      ["databases", "messages", "results", "sponsors"].map(folder =>
-        this.getVersionFromStorage(databaseVersion, folder)
-      )
-    );
-
-    this.logger.info(
-      `Versions found:\n  data: ${dataVersion}\n  messages: ${messagesVersion}\n  results: ${resultsVersion}\n  sponsors: ${sponsorsVersion}`
-    );
-
-    const { versions } = this.cache;
-
-    this.logger.info("Loading file contents...");
-    const [data, messages, results, sponsors] = await Promise.all([
-      (async () => {
-        const result = await this.getObjectFromStorage(
-          databaseVersion,
-          "databases",
-          dataVersion,
-          versions.data,
-          this.cache.data
-        );
-        this.logger.info(
-          `Loaded ${databaseVersion}/databases version ${dataVersion}`
-        );
-        return result;
-      })(),
-      (async () => {
-        const result = await this.getArraysFromStorage(
-          databaseVersion,
-          "messages",
-          messagesVersion,
-          versions.messages,
-          this.cache.messages
-        );
-        this.logger.info(
-          `Loaded ${databaseVersion}/messages version (${versions.messages}, ${messagesVersion}]`
-        );
-        return result;
-      })(),
-      (async () => {
-        const result = await this.getArraysFromStorage(
-          databaseVersion,
-          "results",
-          resultsVersion,
-          versions.results,
-          this.cache.results
-        );
-        this.logger.info(
-          `Loaded ${databaseVersion}/results version (${versions.results}, ${resultsVersion}]`
-        );
-        return result;
-      })(),
-      (async () => {
-        const result = await this.getObjectFromStorage(
-          databaseVersion,
-          "sponsors",
-          sponsorsVersion,
-          versions.sponsors,
-          this.cache.sponsors
-        );
-        this.logger.info(
-          `Loaded ${databaseVersion}/databases version ${sponsorsVersion}`
-        );
-        return result;
-      })(),
-    ]);
-
-    this.cache = {
-      versions: {
-        database: databaseVersion,
-        data: dataVersion,
-        messages: messagesVersion,
-        results: resultsVersion,
-        sponsors: sponsorsVersion,
-      },
-      data,
-      messages,
-      results,
-      sponsors,
-    };
-
-    this.initialized = true;
-
-    this.logger.info("Cache synchronization complete");
   }
 
   /**
