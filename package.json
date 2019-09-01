@@ -26,6 +26,7 @@
   "devDependencies": {
     "@types/express": "^4.17.0",
     "@types/jest": "^24.0.16",
+    "@types/mock-aws-s3": "^2.6.1",
     "@types/node": "^12.6.9",
     "@typescript-eslint/eslint-plugin": "^1.13.0",
     "@typescript-eslint/parser": "^1.13.0",
@@ -33,6 +34,7 @@
     "eslint-config-prettier": "^6.0.0",
     "eslint-plugin-prettier": "^3.1.0",
     "jest": "^24.8.0",
+    "mock-aws-s3": "github:SBC2000/mock-aws-s3#07e9c60bf7a8f7f6ac6ed5cdf35b44761ad3f1cb",
     "prettier": "^1.18.2",
     "ts-jest": "^24.0.2",
     "ts-node": "^8.3.0",

@@ -2,17 +2,26 @@ import { S3 } from "aws-sdk";
 
 export interface Storage {
   getLatestFolderName(): Promise<string | undefined>;
-  getLatestFileName(folder: string): Promise<number | undefined>;
-  getObjectFile(folder: string, fileName: number): Promise<object>;
+  getLatestFileName(
+    folder: string,
+    subFolder: string
+  ): Promise<number | undefined>;
+  getObjectFile(
+    folder: string,
+    subFolder: string,
+    fileName: number
+  ): Promise<object>;
   /**
    * Get all file contents between start and end. Not that contrary to common
    * practice start is excluded and end is included.
    * @param folder
+   * @param subFolder
    * @param start
    * @param end
    */
   getArrayFiles(
     folder: string,
+    subFolder: string,
     start: number,
     end: number
   ): Promise<object[][]>;
@@ -27,13 +36,21 @@ export interface S3Config {
   s3Bucket: string;
 }
 
-export class S3Storage implements Storage {
-  private bucketName: string;
-  private connection: S3;
+export function createS3Storage({
+  accessKeyId,
+  secretAccessKey,
+  s3Bucket,
+}: S3Config): Storage {
+  return new S3Storage(new S3({ accessKeyId, secretAccessKey }), s3Bucket);
+}
 
-  public constructor({ accessKeyId, secretAccessKey, s3Bucket }: S3Config) {
-    this.bucketName = s3Bucket;
-    this.connection = new S3({ accessKeyId, secretAccessKey });
+export class S3Storage implements Storage {
+  private connection: S3;
+  private bucketName: string;
+
+  public constructor(connection: S3, bucketName: string) {
+    this.connection = connection;
+    this.bucketName = bucketName;
   }
 
   public async getLatestFolderName(): Promise<string | undefined> {
@@ -41,8 +58,11 @@ export class S3Storage implements Storage {
     return directories.pop();
   }
 
-  public async getLatestFileName(folder: string): Promise<number | undefined> {
-    const fileNames = await this.listFiles(folder);
+  public async getLatestFileName(
+    folder: string,
+    subFolder: string
+  ): Promise<number | undefined> {
+    const fileNames = await this.listFiles(`${folder}/${subFolder}`);
     if (fileNames.length === 0) {
       return;
     }
@@ -59,6 +79,7 @@ export class S3Storage implements Storage {
 
   public async getObjectFile(
     folder: string,
+    subFolder: string,
     fileName: number
   ): Promise<object> {
     const fullFileName = `0000${fileName}`.slice(-4);
@@ -66,7 +87,7 @@ export class S3Storage implements Storage {
     const object = await this.connection
       .getObject({
         Bucket: this.bucketName,
-        Key: `${folder}/${fullFileName}.json`,
+        Key: `${folder}/${subFolder}/${fullFileName}.json`,
       })
       .promise();
 
@@ -79,13 +100,14 @@ export class S3Storage implements Storage {
 
   public async getArrayFiles(
     folder: string,
+    subFolder: string,
     start: number,
     end: number
   ): Promise<object[][]> {
     const files = await Promise.all(
       [...Array(end - start).keys()]
         .map(x => x + start + 1)
-        .map(fileName => this.getObjectFile(folder, fileName))
+        .map(fileName => this.getObjectFile(folder, subFolder, fileName))
     );
 
     return files
@@ -97,7 +119,10 @@ export class S3Storage implements Storage {
     const objects = await this.listObjects(prefix, "/");
     return objects
       .map(object =>
-        (object.CommonPrefixes || []).map(x => x.Prefix).filter(isDefined)
+        (object.CommonPrefixes || [])
+          .map(x => x.Prefix)
+          .filter(isDefined)
+          .map(x => x.split("/")[0])
       )
       .reduce((result, list) => [...result, ...list], []);
   }

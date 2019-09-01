@@ -353,12 +353,10 @@ interface StorageContent {
 function createStorage(content?: StorageContent): Storage {
   return {
     getLatestFolderName: async () => content && content.latestFolderName,
-    getLatestFileName: async (folder: string) => {
+    getLatestFileName: async (_: string, subFolder: string) => {
       if (!content || !content.latestFileNames) {
         return;
       }
-
-      const subFolder = folder.split("/").pop();
 
       switch (subFolder) {
         case "databases":
@@ -373,8 +371,7 @@ function createStorage(content?: StorageContent): Storage {
           return;
       }
     },
-    getObjectFile: async (folder: string) => {
-      const subFolder = folder.split("/").pop();
+    getObjectFile: async (folder: string, subFolder: string) => {
       if (content && content.data) {
         if (subFolder === "databases" && content.data.databases) {
           return content.data.databases;
@@ -383,10 +380,9 @@ function createStorage(content?: StorageContent): Storage {
           return content.data.sponsors;
         }
       }
-      throw new Error(`Unknown folder ${folder}`);
+      throw new Error(`Unknown folder ${folder}/${subFolder}`);
     },
-    getArrayFiles: async (folder: string) => {
-      const subFolder = folder.split("/").pop();
+    getArrayFiles: async (folder: string, subFolder: string) => {
       if (content && content.data) {
         if (subFolder === "messages" && content.data.messages) {
           return content.data.messages;
@@ -395,7 +391,7 @@ function createStorage(content?: StorageContent): Storage {
           return content.data.results;
         }
       }
-      throw new Error(`Unknown folder ${folder}`);
+      throw new Error(`Unknown folder ${folder}/${subFolder}`);
     },
   };
 }

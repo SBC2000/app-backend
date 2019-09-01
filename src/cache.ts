@@ -128,7 +128,8 @@ export class CacheHandler {
     folder: string
   ): Promise<number> {
     const fileName = await this.storage.getLatestFileName(
-      `${databaseVersion}/${folder}`
+      databaseVersion,
+      folder
     );
     return fileName || 0;
   }
@@ -155,7 +156,8 @@ export class CacheHandler {
 
     // Otherwise fetch and return the new data.
     return await this.storage.getObjectFile(
-      `${databaseVersion}/${folder}`,
+      databaseVersion,
+      folder,
       newVersion
     );
   }
@@ -181,7 +183,8 @@ export class CacheHandler {
     }
 
     const newData = await this.storage.getArrayFiles(
-      `${databaseVersion}/${folder}`,
+      databaseVersion,
+      folder,
       currentVersion,
       newVersion
     );
