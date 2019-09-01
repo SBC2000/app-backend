@@ -1,5 +1,7 @@
 import { S3 } from "aws-sdk";
 
+import { Logger } from "./logger";
+
 export interface Storage {
   getLatestFolderName(): Promise<string | undefined>;
   getLatestFileName(
@@ -36,21 +38,26 @@ export interface S3Config {
   s3Bucket: string;
 }
 
-export function createS3Storage({
-  accessKeyId,
-  secretAccessKey,
-  s3Bucket,
-}: S3Config): Storage {
-  return new S3Storage(new S3({ accessKeyId, secretAccessKey }), s3Bucket);
+export function createS3Storage(
+  { accessKeyId, secretAccessKey, s3Bucket }: S3Config,
+  logger: Logger
+): Storage {
+  return new S3Storage(
+    new S3({ accessKeyId, secretAccessKey }),
+    s3Bucket,
+    logger
+  );
 }
 
 export class S3Storage implements Storage {
   private connection: S3;
   private bucketName: string;
+  private logger: Logger;
 
-  public constructor(connection: S3, bucketName: string) {
+  public constructor(connection: S3, bucketName: string, logger: Logger) {
     this.connection = connection;
     this.bucketName = bucketName;
+    this.logger = logger;
   }
 
   public async getLatestFolderName(): Promise<string | undefined> {
@@ -140,22 +147,33 @@ export class S3Storage implements Storage {
   ): Promise<S3.ListObjectsOutput[]> {
     const results: S3.ListObjectsOutput[] = [];
 
-    do {
-      const marker =
-        results.length > 0 ? results[results.length - 1].NextMarker : undefined;
+    let isTruncated = true;
+    let marker: string | undefined;
 
-      results.push(
-        await this.connection
-          .listObjects({
-            Bucket: this.bucketName,
-            Delimiter: delimiter,
-            Prefix: prefix,
-            Marker: marker,
-            MaxKeys: 20,
-          })
-          .promise()
-      );
-    } while (results[results.length - 1].IsTruncated);
+    while (isTruncated) {
+      const params = {
+        Bucket: this.bucketName,
+        Delimiter: delimiter,
+        Prefix: prefix,
+        Marker: marker,
+        MaxKeys: 20,
+      };
+
+      this.logger.info(`List objects: ${JSON.stringify(params, null, 2)}`);
+
+      const result = await this.connection.listObjects(params).promise();
+
+      results.push(result);
+
+      isTruncated = result.IsTruncated || false;
+      // S3 only returns NextMarker when delimiter is specified.
+      // Otherwise, use the last content key.
+      marker = delimiter
+        ? result.NextMarker
+        : result.Contents &&
+          (result.Contents.length > 0 || undefined) &&
+          result.Contents[result.Contents.length - 1].Key;
+    }
 
     return results;
   }

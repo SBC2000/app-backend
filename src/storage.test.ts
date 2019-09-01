@@ -1,7 +1,10 @@
 import * as AWSMock from "mock-aws-s3";
 import * as path from "path";
 
+import { createDummyLogger } from "./logger";
 import { S3Storage, Storage } from "./storage";
+
+const logger = createDummyLogger();
 
 beforeAll(() => {
   AWSMock.config.basePath = path.join(__dirname, "../data/buckets");
@@ -11,7 +14,7 @@ describe("when there is full data", () => {
   let storage: Storage;
 
   beforeEach(() => {
-    storage = new S3Storage(new AWSMock.S3(), "full");
+    storage = new S3Storage(new AWSMock.S3(), "full", logger);
   });
 
   it("returns the latest database version", async () => {
@@ -19,7 +22,7 @@ describe("when there is full data", () => {
   });
 
   it("returns the latest data version", async () => {
-    expect(await storage.getLatestFileName("201900", "databases")).toEqual(3);
+    expect(await storage.getLatestFileName("201900", "databases")).toEqual(25);
   });
 
   it("returns the latest message version", async () => {
@@ -35,8 +38,8 @@ describe("when there is full data", () => {
   });
 
   it("returns the latest data content", async () => {
-    expect(await storage.getObjectFile("201900", "databases", 3)).toEqual({
-      some: "data v3 2019",
+    expect(await storage.getObjectFile("201900", "databases", 25)).toEqual({
+      some: "data v25 2019",
     });
   });
 
@@ -74,7 +77,7 @@ describe("when there is some data", () => {
   let storage: Storage;
 
   beforeEach(() => {
-    storage = new S3Storage(new AWSMock.S3(), "partial");
+    storage = new S3Storage(new AWSMock.S3(), "partial", logger);
   });
 
   it("returns the latest database version", async () => {
@@ -104,7 +107,7 @@ describe("when there is no data", () => {
   let storage: Storage;
 
   beforeEach(() => {
-    storage = new S3Storage(new AWSMock.S3(), "empty");
+    storage = new S3Storage(new AWSMock.S3(), "empty", logger);
   });
 
   it("returns no folder", async () => {
