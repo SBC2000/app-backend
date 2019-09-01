@@ -1,4 +1,5 @@
 import * as express from "express";
+import * as http from "http";
 
 import { CacheHandler, Versions } from "./cache";
 import { createConsoleLogger } from "./logger";
@@ -9,6 +10,10 @@ const logger = createConsoleLogger();
 const config = readConfig(process.env);
 
 bootstrap(config);
+
+setInterval(() => {
+  http.request(`${config.baseUrl}/synchronize`);
+}, 1000 * 60 * 5);
 
 async function bootstrap(config: Config): Promise<void> {
   logger.info("Application starting");
@@ -23,6 +28,8 @@ async function bootstrap(config: Config): Promise<void> {
   const app = express();
 
   app.get("/getData.php", (req, res) => {
+    logger.info(`GET getData.php:\n${JSON.stringify(req.query, null, 2)}`);
+
     const previousVersions = parseVersions(req.query);
     if (!previousVersions) {
       return res.sendStatus(400);
@@ -43,6 +50,28 @@ async function bootstrap(config: Config): Promise<void> {
     }
   });
 
+  let throttle = false;
+  app.post("/synchronize", async (_, res) => {
+    logger.info("POST synchronize");
+
+    if (throttle) {
+      return res.sendStatus(503);
+    }
+
+    try {
+      // poor man's rate limiting, probably good enough in practice
+      throttle = true;
+      setTimeout(() => {
+        throttle = false;
+      }, 1000 * 60);
+
+      await cacheHandler.synchronize();
+      res.sendStatus(200);
+    } catch {
+      res.sendStatus(500);
+    }
+  });
+
   app.listen(config.port, () => {
     logger.info(`App listening on port ${config.port}`);
   });
@@ -50,18 +79,21 @@ async function bootstrap(config: Config): Promise<void> {
 
 interface Config {
   port: string;
+  baseUrl: string;
   s3Config: S3Config;
 }
 
 function readConfig(env: Record<string, string | undefined>): Config {
   const port = env.PORT;
+  const baseUrl = env.BASE_URL;
   const accessKeyId = env.AWS_ACCESS_KEY_ID;
   const secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
   const s3Bucket = env.AWS_S3_BUCKET;
 
-  if (!port || !accessKeyId || !secretAccessKey || !s3Bucket) {
+  if (!port || !baseUrl || !accessKeyId || !secretAccessKey || !s3Bucket) {
     const missing = [
       "PORT",
+      "BASEURL",
       "AWS_ACCESS_KEY_ID",
       "AWS_SECRET_ACCESS_KEY",
       "AWS_S3_BUCKET",
@@ -74,7 +106,11 @@ function readConfig(env: Record<string, string | undefined>): Config {
     throw new Error(`Missing env vars: ${missing}`);
   }
 
-  return { port, s3Config: { accessKeyId, secretAccessKey, s3Bucket } };
+  return {
+    port,
+    baseUrl,
+    s3Config: { accessKeyId, secretAccessKey, s3Bucket },
+  };
 }
 
 function parseVersions(
