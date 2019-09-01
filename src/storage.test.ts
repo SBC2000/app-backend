@@ -102,15 +102,3 @@ describe("when there is some data", () => {
     expect(await storage.getLatestFileName("201900", "sponsors")).toEqual(1);
   });
 });
-
-describe("when there is no data", () => {
-  let storage: Storage;
-
-  beforeEach(() => {
-    storage = new S3Storage(new AWSMock.S3(), "empty", logger);
-  });
-
-  it("returns no folder", async () => {
-    expect(await storage.getLatestFolderName()).toBeUndefined();
-  });
-});
