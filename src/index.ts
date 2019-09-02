@@ -12,7 +12,11 @@ const config = readConfig(process.env);
 bootstrap(config);
 
 setInterval(() => {
-  http.request(`${config.baseUrl}/synchronize`);
+  try {
+    http.request(`${config.baseUrl}/synchronize`);
+  } catch (error) {
+    logger.error(`Periodic synchronization failed: ${error}`);
+  }
 }, 1000 * 60 * 5);
 
 async function bootstrap(config: Config): Promise<void> {
