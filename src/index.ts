@@ -1,3 +1,4 @@
+import * as bodyParser from "body-parser";
 import * as express from "express";
 import * as http from "http";
 
@@ -22,14 +23,13 @@ setInterval(() => {
 async function bootstrap(config: Config): Promise<void> {
   logger.info("Application starting");
 
-  const cacheHandler = new CacheHandler(
-    createS3Storage(config.s3Config, logger),
-    logger
-  );
+  const storage = createS3Storage(config.s3Config, logger);
+  const cacheHandler = new CacheHandler(storage, logger);
 
   await cacheHandler.synchronize();
 
   const app = express();
+  app.use(bodyParser.json());
 
   app.get("/getData.php", (req, res) => {
     logger.info(`GET getData.php:\n${JSON.stringify(req.query, null, 2)}`);
@@ -51,6 +51,30 @@ async function bootstrap(config: Config): Promise<void> {
       });
     } catch {
       return res.sendStatus(500);
+    }
+  });
+
+  app.post("/createNewVersion", async (req, res) => {
+    if (!req.body.password) {
+      return res.sendStatus(401);
+    }
+
+    if (req.body.password !== config.password) {
+      return res.sendStatus(403);
+    }
+
+    try {
+      const currentVersion = await storage.getLatestFolderName();
+      const newVersion = getNewVersion(currentVersion);
+
+      await storage.createFolder(newVersion);
+      await Promise.all(
+        ["databases", "messages", "results", "sponsors"].map(subFolder =>
+          storage.createSubFolder(newVersion, subFolder)
+        )
+      );
+    } catch (error) {
+      logger.error(`Create new version failed: ${error}`);
     }
   });
 
@@ -84,37 +108,38 @@ async function bootstrap(config: Config): Promise<void> {
 interface Config {
   port: string;
   baseUrl: string;
+  password: string;
   s3Config: S3Config;
 }
 
 function readConfig(env: Record<string, string | undefined>): Config {
-  const port = env.PORT;
-  const baseUrl = env.BASE_URL;
-  const accessKeyId = env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
-  const s3Bucket = env.AWS_S3_BUCKET;
+  const missing: string[] = [];
+  const readEnvVar = (varName: string): string => {
+    const envVar = env[varName];
 
-  if (!port || !baseUrl || !accessKeyId || !secretAccessKey || !s3Bucket) {
-    const missing = [
-      "PORT",
-      "BASEURL",
-      "AWS_ACCESS_KEY_ID",
-      "AWS_SECRET_ACCESS_KEY",
-      "AWS_S3_BUCKET",
-    ]
-      .filter(key => !env[key])
-      .join(", ");
+    if (!envVar) {
+      missing.push(varName);
+      return "";
+    }
+    return envVar;
+  };
 
-    logger.error(missing);
+  const config = {
+    port: readEnvVar("PORT"),
+    baseUrl: readEnvVar("BASE_URL"),
+    password: readEnvVar("PASSWORD"),
+    s3Config: {
+      accessKeyId: readEnvVar("AWS_ACCESS_KEY_ID"),
+      secretAccessKey: readEnvVar("AWS_SECRET_ACCESS_KEY"),
+      s3Bucket: readEnvVar("AWS_S3_BUCKET"),
+    },
+  };
 
-    throw new Error(`Missing env vars: ${missing}`);
+  if (missing.length > 0) {
+    throw new Error(`Missing env vars: ${missing.join(", ")}`);
   }
 
-  return {
-    port,
-    baseUrl,
-    s3Config: { accessKeyId, secretAccessKey, s3Bucket },
-  };
+  return config;
 }
 
 function parseVersions(
@@ -155,6 +180,24 @@ function formatVersions(
     newDatabaseVersion:
       versions.database === previousDatabaseVersion ? "false" : "true",
   };
+}
+
+// version number are the year plus a 2-digit order number
+function getNewVersion(currentVersion: string | undefined): string {
+  const currentYear = `${new Date().getFullYear()}`;
+
+  let versionNumber = 0;
+  if (currentVersion && currentVersion.startsWith(currentYear)) {
+    const currentVersionNumber = parseInt(currentVersion.substring(4), 10);
+    if (currentVersionNumber >= 99) {
+      throw new Error("Version number cannot be greater than 99");
+    }
+    versionNumber = currentVersionNumber + 1;
+  }
+
+  const versionNumberString = `0${versionNumber}`.slice(-2);
+
+  return `${currentYear}${versionNumberString}`;
 }
 
 function flatten<T>(x: T[][]): T[] {

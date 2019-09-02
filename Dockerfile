@@ -29,7 +29,7 @@ RUN npm ci --only=production
 # copy transpiled app
 COPY --from=build /usr/src/app/dist/*.js ./
 
-ENV PORT=3000 BASE_URL=http://localhost:3000 \
+ENV PORT=3000 BASE_URL=http://localhost:3000 PASSWORD= \
   AWS_ACCESS_KEY_ID= AWS_SECRET_ACCESS_KEY= AWS_S3_BUCKET=
 EXPOSE 3000
 

@@ -29,6 +29,11 @@ export interface Storage {
   ): Promise<object[][]>;
 }
 
+export interface WriteStorage {
+  createFolder(folder: string): Promise<void>;
+  createSubFolder(folder: string, subFolder: string): Promise<void>;
+}
+
 // Naming convention: all json files are 4-digit numbers
 const fileNameRegex = /.*\/(\d{4}).json/;
 
@@ -41,7 +46,7 @@ export interface S3Config {
 export function createS3Storage(
   { accessKeyId, secretAccessKey, s3Bucket }: S3Config,
   logger: Logger
-): Storage {
+): S3Storage {
   return new S3Storage(
     new S3({ accessKeyId, secretAccessKey }),
     s3Bucket,
@@ -49,7 +54,7 @@ export function createS3Storage(
   );
 }
 
-export class S3Storage implements Storage {
+export class S3Storage implements Storage, WriteStorage {
   private connection: S3;
   private bucketName: string;
   private logger: Logger;
@@ -132,6 +137,31 @@ export class S3Storage implements Storage {
     return files
       .map(x => (Array.isArray(x) ? (x as object[]) : undefined))
       .filter(isDefined);
+  }
+
+  public async createFolder(folder: string): Promise<void> {
+    const params = {
+      Bucket: this.bucketName,
+      Key: `${folder}/`,
+    };
+
+    this.logger.info(`Put object: ${JSON.stringify(params, null, 2)}`);
+
+    await this.connection.putObject(params).promise();
+  }
+
+  public async createSubFolder(
+    folder: string,
+    subFolder: string
+  ): Promise<void> {
+    const params = {
+      Bucket: this.bucketName,
+      Key: `${folder}/${subFolder}/`,
+    };
+
+    this.logger.info(`Put object: ${JSON.stringify(params, null, 2)}`);
+
+    await this.connection.putObject(params).promise();
   }
 
   private async listDirectories(prefix?: string): Promise<string[]> {
