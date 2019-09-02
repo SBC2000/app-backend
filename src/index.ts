@@ -54,6 +54,55 @@ async function bootstrap(config: Config): Promise<void> {
     }
   });
 
+  app.post("/upload.php", async (req, res) => {
+    if (!req.body.password) {
+      return res.sendStatus(401);
+    }
+
+    if (req.body.password !== config.password) {
+      return res.sendStatus(403);
+    }
+
+    const type = req.body.type;
+
+    // Note that the types are "database" and "message", so singular.
+    // Consistency is overrated.
+    if (!["database", "message", "results", "sponsors"].includes(type)) {
+      return res.status(400).send("Unknown data type");
+    }
+
+    try {
+      // There is a race condition here. If someone creates a new version
+      // while uploading data, the data ends up in the wrong folder.
+      // Fortunately, both requests are send by the same person and he is
+      // not that fast.
+      const folder = await storage.getLatestFolderName();
+      if (!folder) {
+        return res.status(500).send("No database to upload into.");
+      }
+
+      // The upload script sends "almost json" but without the outer {} or [].
+      // That was once handy in PHP-land (so merging objects and arrays can
+      // be done using concatenating strings) but also was a very bad idea.
+      const data =
+        type === "database" || req.body.type === "sponsors"
+          ? `{${req.body.data || ""}}`
+          : `[${req.body.data || ""}]`;
+
+      const subFolder =
+        type === "database" || type === "message" ? `${type}s` : type;
+
+      // Another race condition here: if someone calls this endpoint twice the
+      // first file will be overwritten by the second. Same guy, still not that fast.
+      const currentNumber =
+        (await storage.getLatestFileName(folder, subFolder)) || 0;
+
+      await storage.createFile(folder, subFolder, currentNumber + 1, data);
+    } catch (error) {
+      logger.error(`Failed to upload ${type}: ${error}`);
+    }
+  });
+
   app.post("/createNewVersion", async (req, res) => {
     if (!req.body.password) {
       return res.sendStatus(401);

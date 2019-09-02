@@ -32,6 +32,12 @@ export interface Storage {
 export interface WriteStorage {
   createFolder(folder: string): Promise<void>;
   createSubFolder(folder: string, subFolder: string): Promise<void>;
+  createFile(
+    folder: string,
+    subFolder: string,
+    fileName: number,
+    data: string
+  ): Promise<void>;
 }
 
 // Naming convention: all json files are 4-digit numbers
@@ -160,6 +166,28 @@ export class S3Storage implements Storage, WriteStorage {
     };
 
     this.logger.info(`Put object: ${JSON.stringify(params, null, 2)}`);
+
+    await this.connection.putObject(params).promise();
+  }
+
+  public async createFile(
+    folder: string,
+    subFolder: string,
+    fileName: number,
+    data: string
+  ): Promise<void> {
+    const fullFileName = `000${fileName}`.slice(-4);
+
+    const params = {
+      Bucket: this.bucketName,
+      Key: `${folder}/${subFolder}/${fullFileName}`,
+      ContentType: "application/json",
+      Body: data,
+    };
+
+    this.logger.info(
+      `Put object: ${JSON.stringify({ ...params, Body: "<DATA>" }, null, 2)}`
+    );
 
     await this.connection.putObject(params).promise();
   }
