@@ -29,7 +29,7 @@ export interface Storage {
   ): Promise<object[][]>;
 }
 
-export interface WriteStorage {
+export interface WritableStorage extends Storage {
   createFolder(folder: string): Promise<void>;
   createSubFolder(folder: string, subFolder: string): Promise<void>;
   createFile(
@@ -60,7 +60,7 @@ export function createS3Storage(
   );
 }
 
-export class S3Storage implements Storage, WriteStorage {
+export class S3Storage implements WritableStorage {
   private connection: S3;
   private bucketName: string;
   private logger: Logger;
