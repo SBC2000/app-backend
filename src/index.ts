@@ -12,9 +12,24 @@ const config = readConfig(process.env);
 
 bootstrap(config);
 
-setInterval(() => {
+setInterval(async () => {
   try {
-    http.request(`${config.baseUrl}/synchronize`);
+    await new Promise((resolve, reject) => {
+      const request = http.request(`${config.baseUrl}/synchronize`, result => {
+        if (
+          !result.statusCode ||
+          result.statusCode < 200 ||
+          result.statusCode > 299
+        ) {
+          return reject(result.statusCode);
+        }
+
+        resolve();
+      });
+
+      request.on("error", error => reject(error));
+      request.end();
+    });
   } catch (error) {
     logger.error(`Periodic synchronization failed: ${error}`);
   }
