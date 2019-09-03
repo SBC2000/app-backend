@@ -19,7 +19,7 @@ async function bootstrap(): Promise<void> {
     try {
       await new Promise((resolve, reject) => {
         const request = http.request(
-          `${config.baseUrl}/synchronize`,
+          { hostname: config.baseUrl, path: "/synchronize", method: "POST" },
           result => {
             const status = result.statusCode;
             if (status && status >= 200 && status <= 299) {
