@@ -89,7 +89,7 @@ async function bootstrap(config: Config): Promise<void> {
     try {
       // There is a race condition here. If someone creates a new version
       // while uploading data, the data ends up in the wrong folder.
-      // Fortunately, both requests are send by the same person and he is
+      // Fortunately, both requests are sent by the same person and he is
       // not that fast.
       const folder = await storage.getLatestFolderName();
       if (!folder) {
@@ -113,6 +113,9 @@ async function bootstrap(config: Config): Promise<void> {
         (await storage.getLatestFileName(folder, subFolder)) || 0;
 
       await storage.createFile(folder, subFolder, currentNumber + 1, data);
+
+      // load the new data into cache
+      await cacheHandler.synchronize();
     } catch (error) {
       logger.error(`Failed to upload ${type}: ${error}`);
     }
