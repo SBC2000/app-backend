@@ -1,23 +1,29 @@
 export interface Logger {
+  debug(message: string): void;
   info(message: string): void;
   warning(message: string): void;
   error(message: string): void;
 }
 
-export const createConsoleLogger = (): Logger => ({
+export type LogLevel = "debug" | "info" | "warning" | "error";
+
+export const createLogger = (level: LogLevel): Logger => ({
+  debug: (message: string) => {
+    if (level === "debug") {
+      console.log(message);
+    }
+  },
   info: (message: string) => {
-    console.log(message);
+    if (level === "debug" || level === "info") {
+      console.log(message);
+    }
   },
   warning: (message: string) => {
-    console.warn(message);
+    if (level !== "error") {
+      console.warn(message);
+    }
   },
   error: (message: string) => {
     console.error(message);
   },
-});
-
-export const createDummyLogger = (): Logger => ({
-  info: () => {},
-  warning: () => {},
-  error: () => {},
 });

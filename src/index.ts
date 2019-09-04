@@ -1,11 +1,11 @@
 import * as http from "http";
 
-import { createConsoleLogger } from "./logger";
+import { createLogger, LogLevel } from "./logger";
 import { Server } from "./server";
 import { S3Config, createS3Storage } from "./storage";
 
-const logger = createConsoleLogger();
 const config = readConfig(process.env);
+const logger = createLogger(config.logLevel);
 const storage = createS3Storage(config.s3Config, logger);
 
 async function bootstrap(): Promise<void> {
@@ -49,6 +49,7 @@ interface Config {
   port: string;
   baseUrl: string;
   password: string;
+  logLevel: LogLevel;
   s3Config: S3Config;
 }
 
@@ -64,10 +65,20 @@ function readConfig(env: Record<string, string | undefined>): Config {
     return envVar;
   };
 
+  const logLevelString = readEnvVar("LOG_LEVEL");
+  const logLevel: LogLevel =
+    logLevelString === "debug" ||
+    logLevelString === "info" ||
+    logLevelString === "warning" ||
+    logLevelString === "error"
+      ? logLevelString
+      : "info";
+
   const config = {
     port: readEnvVar("PORT"),
     baseUrl: readEnvVar("BASE_URL"),
     password: readEnvVar("PASSWORD"),
+    logLevel,
     s3Config: {
       accessKeyId: readEnvVar("AWS_ACCESS_KEY_ID"),
       secretAccessKey: readEnvVar("AWS_SECRET_ACCESS_KEY"),

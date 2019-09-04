@@ -151,7 +151,7 @@ export class S3Storage implements WritableStorage {
       Key: `${folder}/`,
     };
 
-    this.logger.info(`Put object: ${JSON.stringify(params, null, 2)}`);
+    this.logger.debug(`Put object: ${JSON.stringify(params, null, 2)}`);
 
     await this.connection.putObject(params).promise();
   }
@@ -165,7 +165,7 @@ export class S3Storage implements WritableStorage {
       Key: `${folder}/${subFolder}/`,
     };
 
-    this.logger.info(`Put object: ${JSON.stringify(params, null, 2)}`);
+    this.logger.debug(`Put object: ${JSON.stringify(params, null, 2)}`);
 
     await this.connection.putObject(params).promise();
   }
@@ -185,7 +185,7 @@ export class S3Storage implements WritableStorage {
       Body: data,
     };
 
-    this.logger.info(
+    this.logger.debug(
       `Put object: ${JSON.stringify({ ...params, Body: "<DATA>" }, null, 2)}`
     );
 
@@ -229,7 +229,7 @@ export class S3Storage implements WritableStorage {
         MaxKeys: 20,
       };
 
-      this.logger.info(`List objects: ${JSON.stringify(params, null, 2)}`);
+      this.logger.debug(`List objects: ${JSON.stringify(params, null, 2)}`);
 
       const result = await this.connection.listObjects(params).promise();
 

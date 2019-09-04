@@ -1,8 +1,8 @@
 import { Cache, CacheHandler, Versions } from "./cache";
-import { createDummyLogger } from "./logger";
+import { createLogger } from "./logger";
 import { Storage } from "./storage";
 
-const logger = createDummyLogger();
+const logger = createLogger("error");
 
 describe("getNewerData", () => {
   describe("when the cache is not yet synchronized", () => {

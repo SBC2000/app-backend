@@ -42,7 +42,7 @@ export class Server {
     request: express.Request,
     response: express.Response
   ): void => {
-    this.logger.info(
+    this.logger.debug(
       `GET getData.php:\n${JSON.stringify(request.query, null, 2)}`
     );
 
@@ -71,6 +71,13 @@ export class Server {
     request: express.Request,
     response: express.Response
   ): Promise<void> => {
+    const body = { ...request.body };
+    if (body.password) {
+      body.password = "****";
+    }
+
+    this.logger.debug(`Upload: ${JSON.stringify(body, null, 2)}`);
+
     if (!request.body.password) {
       response.sendStatus(401);
       return;
@@ -162,7 +169,7 @@ export class Server {
     request: express.Request,
     response: express.Response
   ): Promise<void> => {
-    this.logger.info("POST synchronize");
+    this.logger.debug("POST synchronize");
 
     if (this.throttle) {
       response.sendStatus(503);

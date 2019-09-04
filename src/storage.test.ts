@@ -1,10 +1,10 @@
 import * as AWSMock from "mock-aws-s3";
 import * as path from "path";
 
-import { createDummyLogger } from "./logger";
+import { createLogger } from "./logger";
 import { S3Storage, Storage } from "./storage";
 
-const logger = createDummyLogger();
+const logger = createLogger("error");
 
 beforeAll(() => {
   AWSMock.config.basePath = path.join(__dirname, "../data/buckets");

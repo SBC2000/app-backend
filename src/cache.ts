@@ -28,7 +28,7 @@ export class CacheHandler {
 
   public async synchronize(): Promise<void> {
     try {
-      this.logger.info("Starting cache synchronization");
+      this.logger.debug("Starting cache synchronization");
 
       const databaseVersion = await this.storage.getLatestFolderName();
 
@@ -37,8 +37,8 @@ export class CacheHandler {
         return;
       }
 
-      this.logger.info(`Found database ${databaseVersion}`);
-      this.logger.info("Loading data versions...");
+      this.logger.debug(`Found database ${databaseVersion}`);
+      this.logger.debug("Loading data versions...");
 
       const [
         dataVersion,
@@ -51,13 +51,13 @@ export class CacheHandler {
         )
       );
 
-      this.logger.info(
+      this.logger.debug(
         `Versions found:\n  data: ${dataVersion}\n  messages: ${messagesVersion}\n  results: ${resultsVersion}\n  sponsors: ${sponsorsVersion}`
       );
 
       const { versions } = this.cache;
 
-      this.logger.info("Loading file contents...");
+      this.logger.debug("Loading file contents...");
       const [data, messages, results, sponsors] = await Promise.all([
         (async () => {
           const result = await this.getObjectFromStorage(
@@ -67,7 +67,7 @@ export class CacheHandler {
             versions.data,
             this.cache.data
           );
-          this.logger.info(
+          this.logger.debug(
             `Loaded ${databaseVersion}/databases version ${dataVersion}`
           );
           return result;
@@ -80,7 +80,7 @@ export class CacheHandler {
             versions.messages,
             this.cache.messages
           );
-          this.logger.info(
+          this.logger.debug(
             `Loaded ${databaseVersion}/messages version (${versions.messages}, ${messagesVersion}]`
           );
           return result;
@@ -93,7 +93,7 @@ export class CacheHandler {
             versions.results,
             this.cache.results
           );
-          this.logger.info(
+          this.logger.debug(
             `Loaded ${databaseVersion}/results version (${versions.results}, ${resultsVersion}]`
           );
           return result;
@@ -106,7 +106,7 @@ export class CacheHandler {
             versions.sponsors,
             this.cache.sponsors
           );
-          this.logger.info(
+          this.logger.debug(
             `Loaded ${databaseVersion}/sponsors version ${sponsorsVersion}`
           );
           return result;
@@ -129,7 +129,7 @@ export class CacheHandler {
 
       this.initialized = true;
 
-      this.logger.info("Cache synchronization complete");
+      this.logger.debug("Cache synchronization complete");
     } catch (error) {
       this.logger.error(`Failed to synchronize cache: ${error}`);
     }
@@ -189,7 +189,7 @@ export class CacheHandler {
       databaseVersion === this.cache.versions.database &&
       newVersion === currentVersion
     ) {
-      this.logger.info(
+      this.logger.debug(
         `Cache for ${databaseVersion}/${folder} is already up-to-date`
       );
 
@@ -198,7 +198,7 @@ export class CacheHandler {
 
     // We need no data: return empty object
     if (newVersion === 0) {
-      this.logger.info(`No data requested for ${databaseVersion}/${folder}`);
+      this.logger.debug(`No data requested for ${databaseVersion}/${folder}`);
 
       return {};
     }
@@ -223,7 +223,7 @@ export class CacheHandler {
       databaseVersion === this.cache.versions.database &&
       newVersion === currentVersion
     ) {
-      this.logger.info(
+      this.logger.debug(
         `Cache for ${databaseVersion}/${folder} is already up-to-date`
       );
 
@@ -232,7 +232,7 @@ export class CacheHandler {
 
     // We need no data: return empty array
     if (newVersion === 0) {
-      this.logger.info(`No data requested for ${databaseVersion}/${folder}`);
+      this.logger.debug(`No data requested for ${databaseVersion}/${folder}`);
 
       return [];
     }
