@@ -180,7 +180,7 @@ export class S3Storage implements WritableStorage {
 
     const params = {
       Bucket: this.bucketName,
-      Key: `${folder}/${subFolder}/${fullFileName}`,
+      Key: `${folder}/${subFolder}/${fullFileName}.json`,
       ContentType: "application/json",
       Body: data,
     };
