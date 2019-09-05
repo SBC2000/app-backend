@@ -108,6 +108,8 @@ export class Server {
         return;
       }
 
+      this.logger.debug(`Upload database found: ${folder}`);
+
       // The upload script sends "almost json" but without the outer {} or [].
       // That was once handy in PHP-land (so merging objects and arrays can
       // be done using concatenating strings) but also was a very bad idea.
@@ -124,12 +126,23 @@ export class Server {
       const currentNumber =
         (await this.storage.getLatestFileName(folder, subFolder)) || 0;
 
+      this.logger.debug(
+        `Current version number for ${folder}/${subFolder}: ${currentNumber}`
+      );
+
       await this.storage.createFile(folder, subFolder, currentNumber + 1, data);
+
+      this.logger.debug(`Version ${currentNumber + 1} created`);
 
       // load the new data into cache
       await this.cacheHandler.synchronize();
+
+      this.logger.debug("Upload synchronization done");
+
+      response.sendStatus(200);
     } catch (error) {
       this.logger.error(`Failed to upload ${type}: ${error}`);
+      response.sendStatus(500);
     }
   };
 
@@ -160,8 +173,10 @@ export class Server {
 
       // load the new data into cache
       await this.cacheHandler.synchronize();
+      response.sendStatus(200);
     } catch (error) {
       this.logger.error(`Create new version failed: ${error}`);
+      response.sendStatus(500);
     }
   };
 
