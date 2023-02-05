@@ -40,16 +40,12 @@ export class CacheHandler {
       this.logger.debug(`Found database ${databaseVersion}`);
       this.logger.debug("Loading data versions...");
 
-      const [
-        dataVersion,
-        messagesVersion,
-        resultsVersion,
-        sponsorsVersion,
-      ] = await Promise.all(
-        ["databases", "messages", "results", "sponsors"].map(folder =>
-          this.getVersionFromStorage(databaseVersion, folder)
-        )
-      );
+      const [dataVersion, messagesVersion, resultsVersion, sponsorsVersion] =
+        await Promise.all(
+          ["databases", "messages", "results", "sponsors"].map((folder) =>
+            this.getVersionFromStorage(databaseVersion, folder)
+          )
+        );
 
       this.logger.debug(
         `Versions found:\n  data: ${dataVersion}\n  messages: ${messagesVersion}\n  results: ${resultsVersion}\n  sponsors: ${sponsorsVersion}`
@@ -130,7 +126,7 @@ export class CacheHandler {
       this.initialized = true;
 
       this.logger.debug("Cache synchronization complete");
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Failed to synchronize cache: ${error}`);
     }
   }

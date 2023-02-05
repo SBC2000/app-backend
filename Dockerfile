@@ -1,4 +1,4 @@
-FROM node:12.7.0 AS build
+FROM node:18.14.0 AS build
 
 WORKDIR /usr/src/app
 
@@ -15,7 +15,7 @@ RUN npm run lint && npm run test
 # build
 RUN npm run build
 
-FROM node:12.7.0-alpine
+FROM node:18.14.0-alpine
 
 # install tini
 RUN apk add --no-cache tini

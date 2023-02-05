@@ -1,18 +1,30 @@
 {
   "compilerOptions": {
-    "lib": ["es2018", "es2015.core", "es2015.promise", "es2018.promise"],
+    /* Basic Options */
+    "incremental": true,
+    "target": "es6",
+    "module": "commonjs",
+    "outDir": "dist",
+    "sourceMap": true,
+
+    /* Strict Type-Checking Options */
+    "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "target": "es5",
-    "sourceMap": true,
-    "downlevelIteration": true,
-    "types": ["node", "jest"],
-  },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts"
-  ]
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+
+    /* Module Resolution Options */
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    /* Experimental Options */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  }
 }

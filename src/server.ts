@@ -1,5 +1,4 @@
-import * as bodyParser from "body-parser";
-import * as express from "express";
+import express from "express";
 
 import { CacheHandler, Versions } from "./cache";
 import { Logger } from "./logger";
@@ -11,7 +10,7 @@ export class Server {
   private password: string;
   private logger: Logger;
 
-  private throttle: boolean = false;
+  private throttle = false;
 
   public constructor(
     storage: WritableStorage,
@@ -28,7 +27,8 @@ export class Server {
     await this.cacheHandler.synchronize();
 
     const app = express();
-    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(express.urlencoded({ extended: true }));
+    app.use(express.json());
 
     app.get("/getData.php", this.getData);
     app.post("/upload.php", this.upload);
@@ -39,7 +39,7 @@ export class Server {
   }
 
   private getData = (
-    request: express.Request,
+    request: express.Request<unknown, unknown, unknown, VersionsQuery>,
     response: express.Response
   ): void => {
     this.logger.debug(
@@ -68,7 +68,7 @@ export class Server {
   };
 
   private upload = async (
-    request: express.Request,
+    request: express.Request<unknown, unknown, UploadBody, unknown>,
     response: express.Response
   ): Promise<void> => {
     const body = { ...request.body };
@@ -92,7 +92,10 @@ export class Server {
 
     // Note that the types are "database" and "message", so singular.
     // Consistency is overrated.
-    if (!["database", "message", "results", "sponsors"].includes(type)) {
+    if (
+      !type ||
+      !["database", "message", "results", "sponsors"].includes(type)
+    ) {
       response.status(400).send("Unknown data type");
       return;
     }
@@ -115,8 +118,8 @@ export class Server {
       // be done using concatenating strings) but also was a very bad idea.
       const data =
         type === "database" || request.body.type === "sponsors"
-          ? `{${request.body.data || ""}}`
-          : `[${request.body.data || ""}]`;
+          ? `{${request.body.data ?? ""}}`
+          : `[${request.body.data ?? ""}]`;
 
       const subFolder =
         type === "database" || type === "message" ? `${type}s` : type;
@@ -140,22 +143,24 @@ export class Server {
       this.logger.debug("Upload synchronization done");
 
       response.sendStatus(200);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Failed to upload ${type}: ${error}`);
       response.sendStatus(500);
     }
   };
 
   private createNewVersion = async (
-    request: express.Request,
+    request: express.Request<unknown, unknown, AuthenticatedBody, unknown>,
     response: express.Response
   ): Promise<void> => {
-    if (!request.body.password) {
+    const requestPassword = request.body.password;
+
+    if (!requestPassword) {
       response.sendStatus(401);
       return;
     }
 
-    if (request.body.password !== this.password) {
+    if (requestPassword !== this.password) {
       response.sendStatus(403);
       return;
     }
@@ -166,7 +171,7 @@ export class Server {
 
       await this.storage.createFolder(newVersion);
       await Promise.all(
-        ["databases", "messages", "results", "sponsors"].map(subFolder =>
+        ["databases", "messages", "results", "sponsors"].map((subFolder) =>
           this.storage.createSubFolder(newVersion, subFolder)
         )
       );
@@ -174,7 +179,7 @@ export class Server {
       // load the new data into cache
       await this.cacheHandler.synchronize();
       response.sendStatus(200);
-    } catch (error) {
+    } catch (error: unknown) {
       this.logger.error(`Create new version failed: ${error}`);
       response.sendStatus(500);
     }
@@ -205,9 +210,7 @@ export class Server {
     }
   };
 
-  private parseVersions = (
-    query: Record<string, string | undefined>
-  ): Versions | undefined => {
+  private parseVersions = (query: VersionsQuery): Versions | undefined => {
     const database = query.databaseversion;
     const data = this.maybeParseInt(query.dataversion);
     const messages = this.maybeParseInt(query.messageversion);
@@ -273,4 +276,21 @@ export class Server {
     const number = parseInt(s, 10);
     return isNaN(number) ? undefined : number;
   };
+}
+
+interface VersionsQuery {
+  databaseversion?: string;
+  dataversion?: string;
+  messageversion?: string;
+  resultversion?: string;
+  sponsorsversion?: string;
+}
+
+interface AuthenticatedBody {
+  password?: string;
+}
+
+interface UploadBody extends AuthenticatedBody {
+  type?: "database" | "message" | "results" | "sponsors";
+  data?: string;
 }

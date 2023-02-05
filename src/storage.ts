@@ -103,7 +103,7 @@ export class S3Storage implements WritableStorage {
     // recover from corrupted data. For object data we can just upload a new
     // version but for arrays we would retry loading until parsing succeeds.
     // Yes, this is a hack, but that applies to most of this project.
-    ignoreParseErrors: boolean = false
+    ignoreParseErrors = false
   ): Promise<object> {
     const fullFileName = `0000${fileName}`.slice(-4);
 
@@ -120,7 +120,7 @@ export class S3Storage implements WritableStorage {
 
     try {
       return JSON.parse(object.Body.toString());
-    } catch (error) {
+    } catch (error: unknown) {
       if (ignoreParseErrors) {
         return {};
       }
@@ -136,12 +136,14 @@ export class S3Storage implements WritableStorage {
   ): Promise<object[][]> {
     const files = await Promise.all(
       [...Array(end - start).keys()]
-        .map(x => x + start + 1)
-        .map(fileName => this.getObjectFile(folder, subFolder, fileName, true))
+        .map((x) => x + start + 1)
+        .map((fileName) =>
+          this.getObjectFile(folder, subFolder, fileName, true)
+        )
     );
 
     return files
-      .map(x => (Array.isArray(x) ? (x as object[]) : undefined))
+      .map((x) => (Array.isArray(x) ? (x as object[]) : undefined))
       .filter(isDefined);
   }
 
@@ -195,11 +197,11 @@ export class S3Storage implements WritableStorage {
   private async listDirectories(prefix?: string): Promise<string[]> {
     const objects = await this.listObjects(prefix, "/");
     return objects
-      .map(object =>
+      .map((object) =>
         (object.CommonPrefixes || [])
-          .map(x => x.Prefix)
+          .map((x) => x.Prefix)
           .filter(isDefined)
-          .map(x => x.split("/")[0])
+          .map((x) => x.split("/")[0])
       )
       .reduce((result, list) => [...result, ...list], []);
   }
@@ -207,7 +209,9 @@ export class S3Storage implements WritableStorage {
   private async listFiles(prefix?: string): Promise<string[]> {
     const objects = await this.listObjects(prefix);
     return objects
-      .map(object => (object.Contents || []).map(x => x.Key).filter(isDefined))
+      .map((object) =>
+        (object.Contents || []).map((x) => x.Key).filter(isDefined)
+      )
       .reduce((result, list) => [...result, ...list], []);
   }
 

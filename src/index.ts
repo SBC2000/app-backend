@@ -1,4 +1,4 @@
-import * as http from "http";
+import http from "http";
 
 import { createLogger, LogLevel } from "./logger";
 import { Server } from "./server";
@@ -17,10 +17,10 @@ async function bootstrap(): Promise<void> {
 
   setInterval(async () => {
     try {
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         const request = http.request(
           { hostname: config.baseUrl, path: "/synchronize", method: "POST" },
-          result => {
+          (result) => {
             const status = result.statusCode;
             if (status && status >= 200 && status <= 299) {
               resolve();
@@ -30,7 +30,7 @@ async function bootstrap(): Promise<void> {
           }
         );
 
-        request.on("error", error => reject(error));
+        request.on("error", (error) => reject(error));
         request.end();
       });
     } catch (error) {
