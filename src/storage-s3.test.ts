@@ -2,7 +2,8 @@ import * as AWSMock from "mock-aws-s3";
 import * as path from "path";
 
 import { createLogger } from "./logger";
-import { S3Storage, Storage } from "./storage";
+import { Storage } from "./storage";
+import { S3Storage } from "./storage-s3";
 
 const logger = createLogger("error");
 

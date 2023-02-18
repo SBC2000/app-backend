@@ -1,6 +1,6 @@
 import { createLogger, LogLevel } from "./logger";
 import { Server } from "./server";
-import { S3Config, createS3Storage } from "./storage";
+import { S3Config, createS3Storage } from "./storage-s3";
 
 const config = readConfig(process.env);
 const logger = createLogger(config.logLevel);
