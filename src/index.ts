@@ -1,5 +1,3 @@
-import http from "http";
-
 import { createLogger, LogLevel } from "./logger";
 import { Server } from "./server";
 import { S3Config, createS3Storage } from "./storage";
@@ -15,29 +13,6 @@ async function bootstrap(): Promise<void> {
 
   const app = await server.createApp();
 
-  setInterval(async () => {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const request = http.request(
-          { hostname: config.baseUrl, path: "/synchronize", method: "POST" },
-          (result) => {
-            const status = result.statusCode;
-            if (status && status >= 200 && status <= 299) {
-              resolve();
-            } else {
-              reject(status);
-            }
-          }
-        );
-
-        request.on("error", (error) => reject(error));
-        request.end();
-      });
-    } catch (error) {
-      logger.error(`Periodic synchronization failed: ${error}`);
-    }
-  }, 1000 * 60 * 5);
-
   app.listen(config.port, () => {
     logger.info(`App listening on port ${config.port}`);
   });
@@ -47,7 +22,6 @@ bootstrap();
 
 interface Config {
   port: string;
-  baseUrl: string;
   password: string;
   logLevel: LogLevel;
   s3Config: S3Config;
@@ -76,7 +50,6 @@ function readConfig(env: Record<string, string | undefined>): Config {
 
   const config = {
     port: readEnvVar("PORT"),
-    baseUrl: readEnvVar("BASE_URL"),
     password: readEnvVar("PASSWORD"),
     logLevel,
     s3Config: {
