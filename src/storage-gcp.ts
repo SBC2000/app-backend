@@ -6,20 +6,27 @@ import {
 } from "@google-cloud/storage";
 
 import { Logger } from "./logger";
-import { StorageBase } from "./storage";
+import { StorageBase, WritableStorage } from "./storage";
+
+export interface GcpConfig {
+  bucketName: string;
+}
+
+export function createGcpStorage(
+  { bucketName }: GcpConfig,
+  logger: Logger
+): WritableStorage {
+  return new GcpStorage(new StorageSdk().bucket(bucketName), logger);
+}
 
 export class GcpStorage extends StorageBase {
   private bucket: Bucket;
   private logger: Logger;
 
-  public constructor(
-    storageSdk: StorageSdk,
-    bucketName: string,
-    logger: Logger
-  ) {
+  public constructor(bucket: Bucket, logger: Logger) {
     super();
 
-    this.bucket = storageSdk.bucket(bucketName);
+    this.bucket = bucket;
     this.logger = logger;
   }
 

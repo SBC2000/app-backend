@@ -1,10 +1,18 @@
 import { createLogger, LogLevel } from "./logger";
 import { Server } from "./server";
+import { createGcpStorage, GcpConfig } from "./storage-gcp";
 import { S3Config, createS3Storage } from "./storage-s3";
 
 const config = readConfig(process.env);
 const logger = createLogger(config.logLevel);
-const storage = createS3Storage(config.s3Config, logger);
+const storage = (() => {
+  switch (config.storageConfig.type) {
+    case "aws":
+      return createS3Storage(config.storageConfig.config, logger);
+    case "gcp":
+      return createGcpStorage(config.storageConfig.config, logger);
+  }
+})();
 
 async function bootstrap(): Promise<void> {
   logger.info("Application starting");
@@ -24,8 +32,12 @@ interface Config {
   port: string;
   password: string;
   logLevel: LogLevel;
-  s3Config: S3Config;
+  storageConfig: StorageConfig;
 }
+
+type StorageConfig =
+  | { type: "aws"; config: S3Config }
+  | { type: "gcp"; config: GcpConfig };
 
 function readConfig(env: Record<string, string | undefined>): Config {
   const missing: string[] = [];
@@ -48,15 +60,35 @@ function readConfig(env: Record<string, string | undefined>): Config {
       ? logLevelString
       : "info";
 
+  const storageConfig: StorageConfig = (() => {
+    const storageType = readEnvVar("STORAGE_TYPE");
+    switch (storageType) {
+      case "aws":
+        return {
+          type: "aws",
+          config: {
+            accessKeyId: readEnvVar("AWS_ACCESS_KEY_ID"),
+            secretAccessKey: readEnvVar("AWS_SECRET_ACCESS_KEY"),
+            s3Bucket: readEnvVar("AWS_S3_BUCKET"),
+          },
+        };
+      case "gcp":
+        return {
+          type: "gcp",
+          config: {
+            bucketName: readEnvVar("GCP_BUCKET_NAME"),
+          },
+        };
+      default:
+        throw new Error(`Invalid STORAGE_TYPE: ${storageType}`);
+    }
+  })();
+
   const config = {
     port: readEnvVar("PORT"),
     password: readEnvVar("PASSWORD"),
     logLevel,
-    s3Config: {
-      accessKeyId: readEnvVar("AWS_ACCESS_KEY_ID"),
-      secretAccessKey: readEnvVar("AWS_SECRET_ACCESS_KEY"),
-      s3Bucket: readEnvVar("AWS_S3_BUCKET"),
-    },
+    storageConfig,
   };
 
   if (missing.length > 0) {
