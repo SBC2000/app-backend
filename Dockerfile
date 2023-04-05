@@ -29,8 +29,14 @@ RUN npm ci --only=production
 # copy transpiled app
 COPY --from=build /usr/src/app/dist/*.js ./
 
-ENV PORT=3000 BASE_URL=localhost:3000 LOG_LEVEL=info PASSWORD= \
-  AWS_ACCESS_KEY_ID= AWS_SECRET_ACCESS_KEY= AWS_S3_BUCKET=
+ENV PORT=3000 \
+  LOG_LEVEL=info \
+  PASSWORD= \
+  STORAGE_TYPE=aws \
+  AWS_ACCESS_KEY_ID= \
+  AWS_SECRET_ACCESS_KEY= \
+  AWS_S3_BUCKET= \
+  GCP_BUCKET_NAME=
 EXPOSE 3000
 
 ENTRYPOINT ["tini"]
