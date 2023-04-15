@@ -1,7 +1,7 @@
 import {
   Bucket,
-  File,
   GetFilesOptions,
+  GetFilesResponse,
   Storage as StorageSdk,
 } from "@google-cloud/storage";
 
@@ -40,21 +40,26 @@ export class GcpStorage extends StorageBase {
       .save("", { contentType: "application/x-www-form-urlencoded" });
   }
 
-  protected async listDirectories(prefix?: string): Promise<string[]> {
-    const objects = await this.listObjects(prefix, "/");
-    return objects.map((object) => object.name).map((x) => x.split("/")[0]);
+  protected listDirectories(prefix?: string): Promise<string[]> {
+    return this.listObjects(prefix, "/", ([, , { prefixes }]) =>
+      prefixes.map((prefix: string) =>
+        prefix.endsWith("/") ? prefix.slice(0, -1) : prefix
+      )
+    );
   }
 
-  protected async listFiles(prefix?: string): Promise<string[]> {
-    const objects = await this.listObjects(prefix);
-    return objects.map((object) => object.name);
+  protected listFiles(prefix?: string): Promise<string[]> {
+    return this.listObjects(prefix, undefined, ([files]) =>
+      files.map((file) => file.name)
+    );
   }
 
-  protected async listObjects(
-    prefix?: string,
-    delimiter?: string
-  ): Promise<File[]> {
-    const result: File[] = [];
+  private async listObjects<T>(
+    prefix: string | undefined,
+    delimiter: string | undefined,
+    handleResponse: (response: GetFilesResponse) => T[]
+  ): Promise<T[]> {
+    const result: T[] = [];
 
     let query: GetFilesOptions = {
       delimiter,
@@ -67,13 +72,10 @@ export class GcpStorage extends StorageBase {
     while (query) {
       this.logger.debug(`Get files: ${JSON.stringify(query, null, 2)}`);
 
-      const [files, nextQuery] = await this.bucket.getFiles(query);
+      const response = await this.bucket.getFiles(query);
 
-      result.push(...files);
-      query = {
-        ...query,
-        ...nextQuery,
-      };
+      result.push(...handleResponse(response));
+      query = response[1];
     }
 
     return result;
