@@ -17,7 +17,12 @@ const storage = (() => {
 async function bootstrap(): Promise<void> {
   logger.info("Application starting");
 
-  const server = new Server(storage, config.password, logger);
+  const server = new Server(
+    storage,
+    config.password,
+    config.frontendUrl,
+    logger
+  );
 
   const app = await server.createApp();
 
@@ -31,6 +36,7 @@ bootstrap();
 interface Config {
   port: string;
   password: string;
+  frontendUrl: string;
   logLevel: LogLevel;
   storageConfig: StorageConfig;
 }
@@ -87,6 +93,7 @@ function readConfig(env: Record<string, string | undefined>): Config {
   const config = {
     port: readEnvVar("PORT"),
     password: readEnvVar("PASSWORD"),
+    frontendUrl: readEnvVar("FRONTEND_URL"),
     logLevel,
     storageConfig,
   };

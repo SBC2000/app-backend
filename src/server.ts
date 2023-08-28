@@ -1,4 +1,5 @@
 import express from "express";
+import { createProxyMiddleware } from "http-proxy-middleware";
 
 import { CacheHandler, Versions } from "./cache";
 import { Logger } from "./logger";
@@ -8,6 +9,7 @@ export class Server {
   private cacheHandler: CacheHandler;
   private storage: WritableStorage;
   private password: string;
+  private frontendUrl: string;
   private logger: Logger;
 
   private throttle = false;
@@ -15,11 +17,13 @@ export class Server {
   public constructor(
     storage: WritableStorage,
     password: string,
+    frontendUrl: string,
     logger: Logger
   ) {
     this.cacheHandler = new CacheHandler(storage, logger);
     this.storage = storage;
     this.password = password;
+    this.frontendUrl = frontendUrl;
     this.logger = logger;
   }
 
@@ -34,6 +38,16 @@ export class Server {
     app.post("/upload.php", this.upload);
     app.post("/createNewVersion", this.createNewVersion);
     app.post("/synchronize", this.synchronize);
+
+    app.use(
+      "/",
+      createProxyMiddleware({
+        target: this.frontendUrl,
+        changeOrigin: true,
+        // map anything that is not a file to index.html
+        pathRewrite: (path) => (/\.[^\\]+$/.test(path) ? path : "index.html"),
+      })
+    );
 
     return app;
   }
